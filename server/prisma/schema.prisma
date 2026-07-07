@@ -1,0 +1,118 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  // Starting in Prisma v7, the connection url property is no longer allowed directly inside the schema.prisma file and must live in prisma.config.ts
+  // url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------
+// ENUMS (Pre-defined lists of allowed values)
+// ------------------------------------------------------
+
+// Enums are not natively supported in SQLite the same way they are in PostgreSQL.
+// Prisma handles this in SQLite by enforcing these string values at the application level.
+
+// ------------------------------------------------------
+// MODELS (Database Tables)
+// ------------------------------------------------------
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String   // This will store a securely hashed Bcrypt password, NEVER plain text
+  role      String   @default("COACH") // Can be "ADMIN" or "COACH"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Team {
+  id          String   @id @default(uuid())
+  name        String
+  isOurTeam   Boolean  @default(false) // True for Faith Drive, False for Opponents
+  logoUrl     String?  // The question mark means this field is optional (nullable)
+  
+  // Relationships: A team can have many players
+  players     Player[] 
+
+  // Relationships: A team can be involved in many matches (as home or away)
+  homeMatches Match[]  @relation("HomeTeam")
+  awayMatches Match[]  @relation("AwayTeam")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Player {
+  id             String   @id @default(uuid())
+  teamId         String
+  firstName      String
+  lastName       String
+  dateOfBirth    DateTime?
+  position       String?
+  heightCm       Float?
+  weightKg       Float?
+  profilePicUrl  String?
+
+  // Relationship: A player belongs to one team
+  team           Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
+  // Relationships: A player can be involved in many events (as primary or secondary)
+  primaryEvents   MatchEvent[] @relation("PrimaryPlayer")
+  secondaryEvents MatchEvent[] @relation("SecondaryPlayer")
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Match {
+  id             String   @id @default(uuid())
+  tournamentName String?
+  matchDate      DateTime
+  
+  homeTeamId     String
+  awayTeamId     String
+
+  // Relationships: A match connects to two teams
+  homeTeam       Team     @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam       Team     @relation("AwayTeam", fields: [awayTeamId], references: [id])
+
+  // State Management for the live timer logic
+  status         String   @default("SCHEDULED") // SCHEDULED, FIRST_HALF, HALFTIME, SECOND_HALF, FINISHED
+  kickoffTime    DateTime? // Used to retroactively calculate game minutes if the coach forgets to start the timer
+  
+  // Relationship: A match has many events
+  events         MatchEvent[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model MatchEvent {
+  id               String   @id @default(uuid())
+  matchId          String
+  
+  // The player who did the action (e.g., scored the goal, got the card)
+  primaryPlayerId  String?
+  
+  // The secondary player involved (e.g., provided the assist, or the player coming OFF in a substitution)
+  secondaryPlayerId String?
+
+  eventType        String   // GOAL, YELLOW_CARD, RED_CARD, SUB_IN, SUB_OUT, INJURY
+  gameMinute       Int      // The exact minute the event happened (e.g., 43, 89)
+  notes            String?
+
+  // Relationships
+  match            Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  primaryPlayer    Player?  @relation("PrimaryPlayer", fields: [primaryPlayerId], references: [id])
+  secondaryPlayer  Player?  @relation("SecondaryPlayer", fields: [secondaryPlayerId], references: [id])
+
+  timestamp        DateTime @default(now()) // The exact real-world time the button was pressed
+}
