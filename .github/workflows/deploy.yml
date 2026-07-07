@@ -1,0 +1,32 @@
+name: Deploy Pitch Metrics to VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /var/www/pitch-metrics
+            
+            # Pull latest code
+            git pull origin main
+            
+            # Install backend dependencies and restart API
+            cd server
+            npm install
+            pm2 restart pitch-metrics-api || pm2 start server.js --name pitch-metrics-api
+            
+            # Install frontend dependencies and build React app
+            cd ../client
+            npm install
+            npm run build
