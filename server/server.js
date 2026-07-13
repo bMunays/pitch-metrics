@@ -4,37 +4,39 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-require('dotenv').config(); // Loads variables from the .env file
+require('dotenv').config(); 
 const { PrismaClient } = require('@prisma/client');
+
+// Import our route files
+const authRoutes = require('./routes/auth'); 
+const teamRoutes = require('./routes/teams');
+const playerRoutes = require('./routes/players');
+const matchRoutes = require('./routes/matches'); // NEW: Import match routes
 
 // ==========================================
 // 2. INITIALIZE APP & DATABASE
 // ==========================================
 const app = express();
-const prisma = new PrismaClient(); // Creates the connection to SQLite
+const prisma = new PrismaClient(); 
 
 // ==========================================
 // 3. APPLY MIDDLEWARE
 // ==========================================
-// Middleware are functions that run BEFORE your routes handle the request.
-
-// Helmet secures Express apps by setting various HTTP headers.
 app.use(helmet()); 
-
-// CORS allows your frontend to communicate with this backend.
 app.use(cors()); 
-
-// express.json() allows the server to accept incoming data in JSON format 
-// (e.g., when the Android app or React app sends user login details).
 app.use(express.json()); 
-
 
 // ==========================================
 // 4. DEFINE ROUTES
 // ==========================================
-// A route is a URL endpoint the frontend can request data from.
 
-// A simple health-check route to verify the server is running
+// Connect the route files to specific base URLs
+app.use('/api/auth', authRoutes);
+app.use('/api/teams', teamRoutes);
+app.use('/api/players', playerRoutes);
+app.use('/api/matches', matchRoutes); // NEW: Connect match routes
+
+// Health-check route
 app.get('/api/health', (req, res) => {
     res.status(200).json({ 
         status: 'success', 
@@ -42,10 +44,9 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// A temporary route to test the database connection
+// Database connection test
 app.get('/api/test-db', async (req, res) => {
     try {
-        // We attempt to count the users in the database
         const userCount = await prisma.user.count();
         res.status(200).json({ 
             status: 'success', 
@@ -64,7 +65,6 @@ app.get('/api/test-db', async (req, res) => {
 // ==========================================
 // 5. START THE SERVER
 // ==========================================
-// We pull the PORT from the .env file. If it doesn't exist, we default to 5000.
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
