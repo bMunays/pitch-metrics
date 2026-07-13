@@ -34,6 +34,8 @@ jobs:
           # ==========================================
           # 3. REMOTE SERVER AUTOMATION SCRIPTS
           # ==========================================
+          set -e # 👈 FORCE PIPELINE TO ABORT AND ERROR IF ANY STEP FAILS Below
+
           # Step 3.1: Navigate to the main Git root directory to pull down code changes
           cd /var/www/pitch-metrics
 
@@ -56,4 +58,3 @@ jobs:
 
           # Step 3.7: Recycle process logs and restart the app instance safely
           pm2 restart pitch-metrics || pm2 start server.js --name "pitch-metrics"
-          
