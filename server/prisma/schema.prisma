@@ -10,7 +10,7 @@ generator client {
 datasource db {
   provider = "sqlite"
   // Starting in Prisma v7, the connection url property is no longer allowed directly inside the schema.prisma file and must live in prisma.config.ts
-  // url      = env("DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
 // ------------------------------------------------------
