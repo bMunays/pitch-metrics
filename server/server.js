@@ -4,6 +4,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const path = require('path'); // Added to safely handle directory paths across systems
 require('dotenv').config(); 
 const { PrismaClient } = require('@prisma/client');
 
@@ -25,6 +26,9 @@ const prisma = new PrismaClient();
 app.use(helmet()); 
 app.use(cors()); 
 app.use(express.json()); 
+
+// Serve static assets from the separate client "dist" folder one level up
+app.use(express.static(path.join(__dirname, '../client/dist')));
 
 // ==========================================
 // 4. DEFINE ROUTES
@@ -60,6 +64,12 @@ app.get('/api/test-db', async (req, res) => {
             message: 'Failed to connect to the database.' 
         });
     }
+});
+
+// Catch-all route to serve the Vite frontend index.html for any non-API requests
+// (Must remain the last route definition in this block)
+app.get('*splat', (req, res) => {
+    res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
 });
 
 // ==========================================

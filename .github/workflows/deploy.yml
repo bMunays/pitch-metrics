@@ -40,14 +40,20 @@ jobs:
           # Step 3.2: Pull down the fresh codebase updates from upstream git
           git pull origin main
 
-          # Step 3.3: Step down into the server module for dependencies and execution
+          # Step 3.3: Navigate to the client folder and compile the Vite frontend production bundle
+          cd /var/www/pitch-metrics/client
+          npm install
+          npm run build
+
+          # Step 3.4: Step down into the server module for dependencies and execution
           cd /var/www/pitch-metrics/server
 
-          # Step 3.4: Force a clean, synchronized install of required packages
+          # Step 3.5: Force a clean, synchronized install of required packages
           npm install --omit=dev
 
-          # Step 3.5: Rebuild the local Prisma v6 binary engines
+          # Step 3.6: Rebuild the local Prisma v6 binary engines
           npx prisma generate
 
-          # Step 3.6: Recycle process logs and restart the app instance safely
+          # Step 3.7: Recycle process logs and restart the app instance safely
           pm2 restart pitch-metrics || pm2 start server.js --name "pitch-metrics"
+          
