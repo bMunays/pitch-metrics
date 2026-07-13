@@ -35,7 +35,7 @@ jobs:
           # 3. REMOTE SERVER AUTOMATION SCRIPTS
           # ==========================================
           # Step 3.1: Navigate straight into the project root directory
-          cd /C/Users/48175/Downloads/Documents/Projects/pitch-metrics/server || cd ~/Projects/pitch-metrics/server
+          cd /var/www/pitch-metrics/server
 
           # Step 3.2: Pull down the fresh codebase updates from upstream git
           git pull origin main
