@@ -19,13 +19,11 @@ router.post('/', async (req, res) => {
             return res.status(400).json({ message: "Both Home Team ID and Away Team ID are required." });
         }
 
-        // Create the overarching Match container
         const newMatch = await prisma.match.create({
             data: {
                 homeTeamId: homeTeamId,
                 awayTeamId: awayTeamId,
                 tournamentName: tournamentName || "Friendly",
-                // If a date is provided, use it. Otherwise, assume the match is happening right now.
                 matchDate: matchDate ? new Date(matchDate) : new Date(),
                 status: "SCHEDULED"
             }
@@ -43,7 +41,36 @@ router.post('/', async (req, res) => {
 });
 
 // ==========================================
-// ROUTE 2: LOG A LIVE MATCH EVENT (The Rapid-Fire Route)
+// ROUTE 1.5: GET ALL MATCHES (NEW!)
+// Endpoint: GET /api/matches
+// ==========================================
+// We need this so the Dashboard can list all historical matches
+router.get('/', async (req, res) => {
+    try {
+        const matches = await prisma.match.findMany({
+            // Order them by date, newest first
+            orderBy: {
+                matchDate: 'desc' 
+            },
+            // Include the team names so we don't just send raw IDs to the frontend
+            include: {
+                homeTeam: { select: { name: true } },
+                awayTeam: { select: { name: true } }
+            }
+        });
+
+        res.status(200).json({
+            message: "Matches retrieved successfully",
+            matches: matches
+        });
+    } catch (error) {
+        console.error("Error fetching all matches:", error);
+        res.status(500).json({ message: "Server error while fetching matches." });
+    }
+});
+
+// ==========================================
+// ROUTE 2: LOG A LIVE MATCH EVENT
 // Endpoint: POST /api/matches/:matchId/events
 // ==========================================
 router.post('/:matchId/events', async (req, res) => {
@@ -51,22 +78,19 @@ router.post('/:matchId/events', async (req, res) => {
         const { matchId } = req.params;
         const { eventType, gameMinute, primaryPlayerId, secondaryPlayerId, notes } = req.body;
 
-        // Validation: Every event needs a type and a minute.
         if (!eventType || gameMinute === undefined) {
             return res.status(400).json({ message: "Event type and game minute are required." });
         }
 
-        // Verify the match actually exists
         const matchExists = await prisma.match.findUnique({ where: { id: matchId } });
         if (!matchExists) {
             return res.status(404).json({ message: "Match not found." });
         }
 
-        // Log the event in the database
         const newEvent = await prisma.matchEvent.create({
             data: {
                 matchId: matchId,
-                eventType: eventType, // e.g., "GOAL", "YELLOW_CARD", "SUB_OUT"
+                eventType: eventType,
                 gameMinute: parseInt(gameMinute),
                 primaryPlayerId: primaryPlayerId || null,
                 secondaryPlayerId: secondaryPlayerId || null,
@@ -86,23 +110,20 @@ router.post('/:matchId/events', async (req, res) => {
 });
 
 // ==========================================
-// ROUTE 3: GET FULL MATCH DATA (The Analytics Route)
+// ROUTE 3: GET FULL MATCH DATA (Analytics)
 // Endpoint: GET /api/matches/:matchId
 // ==========================================
 router.get('/:matchId', async (req, res) => {
     try {
         const { matchId } = req.params;
 
-        // This is where Prisma shines. We ask for a match, but we use "include"
-        // to automatically grab the team names and all the events, including the 
-        // names of the players involved in those events!
         const matchData = await prisma.match.findUnique({
             where: { id: matchId },
             include: {
                 homeTeam: true,
                 awayTeam: true,
                 events: {
-                    orderBy: { gameMinute: 'asc' }, // Sort events by time
+                    orderBy: { gameMinute: 'asc' },
                     include: {
                         primaryPlayer: true,
                         secondaryPlayer: true
