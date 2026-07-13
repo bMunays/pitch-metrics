@@ -1,32 +1,50 @@
-name: Deploy Pitch Metrics to VPS
+# ==========================================
+# 1. WORKFLOW TRIGGER CONFIGURATION
+# ==========================================
+# This determines when the automation pipeline should wake up and run.
+name: Pitch Metrics Continuous Deployment
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ] # Runs automatically every time you push code to the main branch
+  workflow_dispatch:   # Allows you to manually trigger this workflow from the GitHub UI
 
+# ==========================================
+# 2. DEPLOYMENT JOBS LIST
+# ==========================================
 jobs:
   deploy:
+    name: Build & Deploy Application to Target VPS
     runs-on: ubuntu-latest
+
     steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v0.1.10
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            cd /var/www/pitch-metrics
-            
-            # Pull latest code
-            git pull origin main
-            
-            # Install backend dependencies and restart API
-            cd server
-            npm install
-            pm2 restart pitch-metrics-api || pm2 start server.js --name pitch-metrics-api
-            
-            # Install frontend dependencies and build React app
-            cd ../client
-            npm install
-            npm run build
+    # Step 2.1: Pull down the repository contents onto the GitHub Runner workspace
+    - name: Checkout Source Code Repository
+      uses: actions/checkout@v4
+
+    # Step 2.2: Establish an encrypted connection to the target server
+    - name: Deploy to VPS via SSH Remote Script
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}         # Your remote server's Public IP address
+        username: ${{ secrets.SERVER_USER }}     # Your hardened non-root user (e.g., ubuntu)
+        key: ${{ secrets.SSH_PRIVATE_KEY }}      # The full multiline text of github_actions_key
+        port: 22                                 # Standard open secure shell port
+        script: |
+          # ==========================================
+          # 3. REMOTE SERVER AUTOMATION SCRIPTS
+          # ==========================================
+          # Step 3.1: Navigate straight into the project root directory
+          cd /C/Users/48175/Downloads/Documents/Projects/pitch-metrics/server || cd ~/Projects/pitch-metrics/server
+
+          # Step 3.2: Pull down the fresh codebase updates from upstream git
+          git pull origin main
+
+          # Step 3.3: Force a clean, synchronized install of required packages
+          npm install --production
+
+          # Step 3.4: Rebuild the local Prisma v6 binary engines
+          npx prisma generate
+
+          # Step 3.5: Recycle process logs and restart the app instance safely
+          pm2 restart server || pm2 start server.js --name "pitch-metrics"
