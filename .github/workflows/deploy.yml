@@ -34,17 +34,20 @@ jobs:
           # ==========================================
           # 3. REMOTE SERVER AUTOMATION SCRIPTS
           # ==========================================
-          # Step 3.1: Navigate straight into the project root directory
-          cd /var/www/pitch-metrics/server
+          # Step 3.1: Navigate to the main Git root directory to pull down code changes
+          cd /var/www/pitch-metrics
 
           # Step 3.2: Pull down the fresh codebase updates from upstream git
           git pull origin main
 
-          # Step 3.3: Force a clean, synchronized install of required packages
-          npm install --production
+          # Step 3.3: Step down into the server module for dependencies and execution
+          cd /var/www/pitch-metrics/server
 
-          # Step 3.4: Rebuild the local Prisma v6 binary engines
+          # Step 3.4: Force a clean, synchronized install of required packages
+          npm install --omit=dev
+
+          # Step 3.5: Rebuild the local Prisma v6 binary engines
           npx prisma generate
 
-          # Step 3.5: Recycle process logs and restart the app instance safely
-          pm2 restart server || pm2 start server.js --name "pitch-metrics"
+          # Step 3.6: Recycle process logs and restart the app instance safely
+          pm2 restart pitch-metrics || pm2 start server.js --name "pitch-metrics"
